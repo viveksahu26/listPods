@@ -44,5 +44,26 @@ func main() {
 		fmt.Printf("Pod Name: %s \n", pod.Name)
 	}
 
-	// xyz, err := clientset.CoreV1().
+	restClient := clientset.CoreV1().RESTClient()
+
+	url := "/api/v1/namespaces/vivek-worspace/pods/vivek"
+	fmt.Println("URL: ", url)
+
+	response := restClient.Get().RequestURI(url).Do(context.TODO())
+
+	// Extract the response body as a byte array
+	body, err := response.Raw()
+	if err != nil {
+		panic(err.Error())
+	}
+	// Convert the byte array to a string
+	responseString := string(body)
+	fmt.Println("\n Pod Respons: ", responseString)
+}
+
+type Pod struct {
+	Kind       string            `json:"kind"`
+	ApiVersion string            `json:"apiVersion"`
+	Metadata   map[string]string `json:"metadata"`
+	// add more fields here if needed
 }
