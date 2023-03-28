@@ -63,7 +63,7 @@ func main() {
 func getPodObject() *core.Pod {
 	return &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-test-pod",
+			Name:      "vivek",
 			Namespace: "vivek-worspace",
 			Labels: map[string]string{
 				"app": "demo",
