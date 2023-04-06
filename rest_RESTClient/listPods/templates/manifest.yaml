@@ -1,0 +1,60 @@
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: listpods
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: listpods
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: listpods
+subjects:
+- kind: ServiceAccount
+  name: listpods
+  namespace: obmondo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: listpods-obmondo-k8s-agent
+  namespace: obmondo
+  labels:
+    app.kubernetes.io/instance: listpods
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: listpods
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: listpods
+    spec:
+      serviceAccountName: listpods
+      containers:
+        - name: listpods
+          image: "viveksahu26/listpods:v1.0.6"
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              memory: 30Mi
+            requests:
+              cpu: 30m
+              memory: 30Mi
+      #
+    #   serviceAccountName: listpods
+    #   automountServiceAccountToken: true
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: listpods
+  namespace: obmondo
+# automountServiceAccountToken: true
