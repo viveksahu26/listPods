@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -68,25 +69,25 @@ func getPods() {
 	fmt.Println("\n APPS IN ARGOCD: ", responseString)
 	fmt.Println("*******************************************************************************************************************")
 
-	// argocdClientset, err := versioned.NewForConfig(config)
-	// if err != nil {
-	// 	log.Fatalf("Failed to create Argo CD clientset: %v", err)
-	// }
-	// log.Println("argocdClientset: ", argocdClientset)
-	// // List all Argo CD applications
-	// argoCDAppsList, err := argocdClientset.ArgoprojV1alpha1().Applications("argocd").List(context.Background(), metav1.ListOptions{})
-	// if err != nil {
-	// 	log.Fatalf("Failed to list Argo CD applications: %v", err)
-	// }
-	// fmt.Println("")
-	// fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
-	// for _, app := range argoCDAppsList.Items {
-	// 	appName := app.GetName()
-	// 	applicationNamespace := app.Spec.Destination.Namespace
-	// 	fmt.Printf("Argocd App Name: %s, Namespace: %s, Labels: %s", appName, applicationNamespace, app.Labels)
+	argocdClientset, err := versioned.NewForConfig(config)
+	if err != nil {
+		log.Fatalf("Failed to create Argo CD clientset: %v", err)
+	}
+	// List all Argo CD applications
+	argoCDAppsList, err := argocdClientset.ArgoprojV1alpha1().Applications("argocd").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		log.Fatalf("Failed to list Argo CD applications: %v", err)
+	}
+	fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	for i, app := range argoCDAppsList.Items {
+		appName := app.GetName()
+		applicationNamespace := app.Spec.Destination.Namespace
+		fmt.Printf("%v ARGOCD APP NAME: %s, NAMESPACE: %s, LABELS: %s \n", i, appName, applicationNamespace, app.Labels)
 
-	// }
-	// fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	}
+	fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	fmt.Println("+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
 }
 
 func runner(ticker *time.Ticker, done <-chan bool) {
