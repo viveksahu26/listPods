@@ -1,0 +1,116 @@
+// func checkResourceWhoseParentIsArgoCD(ownerRef []metav1.OwnerReference, clientset *kubernetes.Clientset, namespace string) bool {
+// 	fmt.Println("-----------------------------------INSIDE------------------------------------------")
+// 	defer fmt.Println("---------------------------------------EXIT------------------------------------------")
+// 	fmt.Println("ownerRef: ", ownerRef)
+// 	for _, y := range ownerRef {
+
+// 		kind := strings.ToLower(y.Kind)
+
+// 		if kind[len(kind)-1] == 's' {
+// 			kind += "es"
+// 		} else {
+// 			kind += "s"
+// 		}
+// 		name := y.Name
+// 		groupVersion := y.APIVersion
+
+// 		grp := strings.Split(groupVersion, "/")
+// 		if len(grp) == 1 {
+// 			grp = append(grp, "")
+// 		}
+
+// 		var API string
+// 		if grp[0] == "" {
+// 			// Core api
+// 			API = "api"
+// 		} else {
+// 			// Custom apis
+// 			API = "apis"
+// 		}
+
+// 		fmt.Println("APIVersion: ", groupVersion)
+// 		fmt.Println("API: ", API)
+
+// 		url := "/" + API + "/" + groupVersion + "/" + "namespaces/" + namespace + "/" + kind + "/" + name
+
+// 		restClient := clientset.CoreV1().RESTClient()
+
+// 		fmt.Println("URL: ", url)
+// 		response := restClient.Get().RequestURI(url).Do(context.TODO())
+
+// 		// Extract the response body as a byte array
+// 		body, err := response.Raw()
+// 		if err != nil {
+// 			panic(err.Error())
+// 		}
+
+// 		var podUnstructured unstructured.Unstructured
+
+// 		err = json.Unmarshal([]byte(body), &podUnstructured)
+// 		if err != nil {
+// 			fmt.Println(err)
+// 		}
+
+// 		objLabels := podUnstructured.GetLabels()
+
+// 		_, containArgocCDLabel1 := objLabels["app.kubernetes.io/instance"]
+// 		_, containArgocCDLabel2 := objLabels["argocd.argoproj.io/instance"]
+
+// 		if containArgocCDLabel1 || containArgocCDLabel2 {
+// 			fmt.Println("\n YES YES YES  ARGOCDDDDDDDDDDD")
+// 			return true
+// 		} else {
+// 			fmt.Println("\n NO NO NO  ARGOCDDDDDDDDDDD")
+// 		}
+// 	}
+// 	return false
+// }
+
+
+func doesPodMetricsPodIsArgoCDManaged(clientset *kubernetes.Clientset, podMetricRes unstructured.Unstructured) bool {
+	fmt.Println(" +++++++++++++++++++++++++++++++++++++++++++INSIDE PODMETRICS ARGOCD +++++++++++++++++++++++++++++++++++++++++++++++++++")
+	defer fmt.Println("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++")
+	restClient := clientset.CoreV1().RESTClient()
+
+	label := podMetricRes.GetLabels()
+	labelSelector := metav1.LabelSelector{
+		MatchLabels: label,
+	}
+	result := &v1.PodList{}
+	namespace := podMetricRes.GetNamespace()
+
+	err := restClient.Get().Namespace(namespace).Resource("pods").VersionedParams(&metav1.ListOptions{
+		LabelSelector: metav1.FormatLabelSelector(&labelSelector),
+	}, metav1.ParameterCodec).Do(context.TODO()).Into(result)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Println("Got the pod object from PodMetrics labels selector")
+
+	for _, pod := range result.Items {
+		fmt.Printf("Pod name: %s\n, Pod Namespace: %s\n, Pod Label: %s\n, Pod OwerRef: %v\n: ", pod.Name, pod.Namespace, pod.Labels, pod.GetOwnerReferences())
+		var yesChildIsArgoCD bool
+		if pod.GetOwnerReferences() != nil {
+			yesChildIsArgoCD = checkResourceWhoseParentIsArgoCD(pod.GetOwnerReferences(), clientset, pod.GetNamespace())
+		}
+		if yesChildIsArgoCD {
+			fmt.Println("YES, PODMETRICS CONTAINING POD IS ARGOCD MANAGED")
+			return true
+		}
+	}
+	return false
+}
+
+var podMetricsPodIsArgoCD bool
+					// Remove Pod Metrics from orphan List.
+					// If containing labels app: openebs-zfs-controller` and `openebs.io/component-name: openebs-zfs-node` openebs.io/component-name:openebs-zfs-node
+					//&& checkPodMetricsLabels || checkPodMetricsControllerLabels && podMetricLabel1 == "openebs-zfs-node" || podMetricLabel2 == "openebs-zfs-controller"
+					if resource.GetKind() == "PodMetrics" {
+						log.Println("Podmetrics with kind: ", resource.GetKind())
+						podMetricsPodIsArgoCD = doesPodMetricsPodIsArgoCDManaged(clientset, resource)
+
+					}
+					if podMetricsPodIsArgoCD {
+						fmt.Println("EXCLUDING PODMETRICS FROM ORPHAN")
+						continue
+					}
