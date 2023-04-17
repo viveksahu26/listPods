@@ -10,7 +10,10 @@ import (
 	"time"
 
 	"github.com/argoproj/argo-cd/v2/pkg/client/clientset/versioned"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
@@ -54,19 +57,44 @@ func getPods() {
 	}
 
 	fmt.Println("*******************************************************************************************************************")
-	url := "/apis/argoproj.io/v1alpha1/namespaces/argocd/applications"
-	fmt.Println("URL: ", url)
+	// url := "/apis/argoproj.io/v1alpha1/namespaces/argocd/applications"
+	// fmt.Println("URL: ", url)
 
-	response := restClient.Get().RequestURI(url).Do(context.TODO())
-
-	// Extract the response body as a byte array
-	body, err := response.Raw()
+	// response := restClient.Get().RequestURI(url).Do(context.TODO())
+	fmt.Println("ARGOCD v1alpha1 USECASE")
+	dynamicClient, err := dynamic.NewForConfig(config)
 	if err != nil {
-		panic(err.Error())
+		fmt.Println("Error creating dynamic client:", err)
 	}
-	// Convert the byte array to a string
-	responseString := string(body)
-	fmt.Println("\n APPS IN ARGOCD: ", responseString)
+	// Define the GVK (Group, Version, Kind) of the Argo CD Application resource
+	applicationGVK := schema.GroupVersionResource{
+		Group:    "argoproj.io",
+		Version:  "v1alpha1",
+		Resource: "Application",
+	}
+	fmt.Println("applicationGVK: ", applicationGVK)
+	applications, err := dynamicClient.Resource(applicationGVK).Namespace("argocd").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		panic(err)
+	}
+
+	// Print the names of all applications
+	for _, app := range applications.Items {
+		metaObj, err := meta.Accessor(&app)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println("NAME:", metaObj.GetName())
+	}
+
+	// // Extract the response body as a byte array
+	// body, err := response.Raw()
+	// if err != nil {
+	// 	panic(err.Error())
+	// }
+	// // Convert the byte array to a string
+	// responseString := string(body)
+	// fmt.Println("\n APPS IN ARGOCD: ", responseString)
 	fmt.Println("*******************************************************************************************************************")
 
 	argocdClientset, err := versioned.NewForConfig(config)
