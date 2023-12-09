@@ -38,23 +38,62 @@ spec:
         app.kubernetes.io/instance: listpods
     spec:
       serviceAccountName: listpods
+      imagePullSecrets:
+          - name: accesstoken-4obmondoagentregistry-customer-enableit
       containers:
         - name: listpods
-          image: "viveksahu26/listpods:v1.0.6"
+          image: "viveksahu26/listpods:v1.0.7 "
           imagePullPolicy: IfNotPresent
+          # ports:
+          # - name: http
+          #   containerPort: 8080
+          #   protocol: TCP
+          # env:
+          #   - name: PROMETHEUS_URL
+          #     value: "http://prometheus-k8s.monitoring:9090"
           resources:
             limits:
               memory: 30Mi
             requests:
               cpu: 30m
               memory: 30Mi
-      #
-    #   serviceAccountName: listpods
-    #   automountServiceAccountToken: true
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: listpods
   namespace: obmondo
-# automountServiceAccountToken: true
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: listpods
+  labels:
+    app.kubernetes.io/instance: listpods
+spec:
+  endpoints:
+  - port: http
+    interval: 30s
+    path: /metrics
+  namespaceSelector:
+    matchNames:
+    - "obmondo"
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: listpods
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: listpods
+  labels:
+    app.kubernetes.io/instance: listpods
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/instance: listpods
